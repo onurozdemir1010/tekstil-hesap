@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#020817">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Tekstil Hesap">
+  <title>Tekstil Hesap</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="brand">
+      <div class="brand-icon" aria-hidden="true">
+        <span></span>
+      </div>
+      <div>
+        <h1>TEKSTİL HESAP</h1>
+        <p>MALZEME · SİPARİŞ · HESAPLAMA</p>
+      </div>
+      <div class="sync-status" id="sync-status">Yerel kayıt</div>
+    </header>
+
+    <nav class="tabs" aria-label="Ana menü">
+      <button class="tab active" data-screen="calculate" type="button">
+        <span class="icon calc-icon" aria-hidden="true"></span>
+        Hesapla
+      </button>
+      <button class="tab" data-screen="save" type="button">
+        <span class="icon user-plus-icon" aria-hidden="true"></span>
+        Kaydet
+      </button>
+      <button class="tab" data-screen="list" type="button">
+        <span class="icon users-icon" aria-hidden="true"></span>
+        Liste
+      </button>
+      <button class="tab" data-screen="settings" type="button">
+        <span class="icon settings-icon" aria-hidden="true"></span>
+        Ayarlar
+      </button>
+    </nav>
+
+    <main>
+      <section class="screen active" id="calculate-screen">
+        <div class="intro">
+          <span>MODÜL 01</span>
+          <h2>Sipariş Hesapla</h2>
+          <p>Müşteri seçin ve iş adedini girin. Verilecek malzeme miktarları otomatik hesaplanır.</p>
+        </div>
+
+        <article class="panel">
+          <div class="panel-head">
+            <span class="icon calc-icon accent" aria-hidden="true"></span>
+            <h3>Hesaplama Formu</h3>
+          </div>
+          <div class="panel-body">
+            <label>
+              <span>Müşteri</span>
+              <select id="customer-select"></select>
+            </label>
+            <label>
+              <span>İş Adedi</span>
+              <input id="quantity-input" type="number" min="1" step="1" inputmode="numeric" placeholder="Örn. 100">
+            </label>
+            <label>
+              <span>İşlemi Yapan</span>
+              <input id="operator-input" type="text" placeholder="Örn. Onur">
+            </label>
+            <button class="primary-action" id="calculate-button" type="button">
+              <span class="icon calc-icon" aria-hidden="true"></span>
+              Hesapla ve Kaydet
+            </button>
+          </div>
+        </article>
+
+        <article class="empty-result" id="empty-result">
+          <div class="box-icon" aria-hidden="true"></div>
+          <p>Bir müşteri seçip iş adedini girdikten sonra verilecek malzemeler burada listelenecek.</p>
+        </article>
+
+        <article class="panel result-panel hidden" id="result-panel">
+          <div class="panel-head result-head">
+            <div>
+              <span>Sonuç</span>
+              <h3 id="result-title">Malzeme Listesi</h3>
+            </div>
+            <button class="ghost-button" id="copy-result" type="button">Kopyala</button>
+          </div>
+          <div class="result-list" id="result-list"></div>
+        </article>
+
+        <article class="panel history-panel">
+          <div class="panel-head result-head">
+            <div>
+              <span>Geçmiş</span>
+              <h3>Sipariş Kayıtları</h3>
+            </div>
+            <button class="ghost-button" id="export-history" type="button">CSV Al</button>
+          </div>
+          <div class="history-list" id="history-list"></div>
+        </article>
+      </section>
+
+      <section class="screen" id="save-screen">
+        <div class="intro">
+          <span>MODÜL 02</span>
+          <h2>Müşteri Kaydet</h2>
+          <p>Müşterinin her sipariş adedi için istediği birim değerleri tanımlayın.</p>
+        </div>
+
+        <form id="customer-form" autocomplete="off">
+          <article class="panel">
+            <div class="panel-head">
+              <span class="icon user-plus-icon accent" aria-hidden="true"></span>
+              <h3>Müşteri Bilgisi</h3>
+            </div>
+            <div class="panel-body">
+              <label>
+                <span>Müşteri / Firma Adı</span>
+                <input id="customer-name" type="text" placeholder="Örn. X Tekstil" required>
+              </label>
+            </div>
+          </article>
+
+          <article class="panel material-panel">
+            <div class="panel-head split-head">
+              <h3>Malzemeler</h3>
+              <button class="add-button" id="add-material" type="button">
+                <span aria-hidden="true">+</span>
+                Malzeme Ekle
+              </button>
+            </div>
+            <div class="material-list" id="material-editor"></div>
+          </article>
+
+          <div class="form-actions">
+            <button class="secondary-action" id="reset-form" type="button">Temizle</button>
+            <button class="primary-action" type="submit">Müşteriyi Kaydet</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="screen" id="list-screen">
+        <div class="intro list-intro">
+          <span>MODÜL 03</span>
+          <h2>Müşteri Listesi</h2>
+          <p>Kayıtlı tüm müşterileri, malzeme şablonlarını ve tarih bilgilerini yönetin.</p>
+          <button class="dark-action" id="new-customer" type="button">
+            <span class="icon user-plus-icon" aria-hidden="true"></span>
+            Yeni Müşteri
+          </button>
+        </div>
+
+        <article class="panel customers-panel">
+          <div class="panel-head customer-head">
+            <div class="customer-title">
+              <span class="icon users-icon accent" aria-hidden="true"></span>
+              <div>
+                <h3>Kayıtlı Müşteriler</h3>
+                <p id="customer-count">0 müşteri</p>
+              </div>
+            </div>
+            <label class="search-wrap" aria-label="Müşteri ara">
+              <span class="search-icon" aria-hidden="true"></span>
+              <input id="search-input" type="search" placeholder="Müşteri ara...">
+            </label>
+          </div>
+          <div class="table-head" aria-hidden="true">
+            <span>Müşteri</span>
+            <span>Malzemeler</span>
+            <span>İşlem</span>
+          </div>
+          <div class="customer-list" id="customer-list"></div>
+        </article>
+      </section>
+
+      <section class="screen" id="settings-screen">
+        <div class="intro">
+          <span>MODÜL 04</span>
+          <h2>Bulut Ayarları</h2>
+          <p>Supabase bağlantısını girin. Böylece aynı kayıtlar sizde ve iş arkadaşlarınızda ortak görünür.</p>
+        </div>
+
+        <article class="panel">
+          <div class="panel-head">
+            <span class="icon settings-icon accent" aria-hidden="true"></span>
+            <h3>Veritabanı Bağlantısı</h3>
+          </div>
+          <form class="panel-body" id="settings-form" autocomplete="off">
+            <label>
+              <span>Supabase URL</span>
+              <input id="supabase-url" type="url" placeholder="https://proje.supabase.co">
+            </label>
+            <label>
+              <span>Anon Key</span>
+              <input id="supabase-key" type="password" placeholder="Supabase anon public key">
+            </label>
+            <label>
+              <span>Varsayılan Kullanıcı</span>
+              <input id="default-operator" type="text" placeholder="Örn. Onur">
+            </label>
+            <div class="settings-actions">
+              <button class="primary-action" type="submit">Bağlantıyı Kaydet</button>
+              <button class="secondary-action" id="test-connection" type="button">Test Et</button>
+              <button class="secondary-action" id="refresh-cloud" type="button">Buluttan Yenile</button>
+              <button class="secondary-action" id="upload-local" type="button">Yereli Buluta Gönder</button>
+              <button class="secondary-action" id="seed-samples" type="button">Örnek Müşterileri Yükle</button>
+              <button class="danger-action" id="local-mode" type="button">Yerel Moda Dön</button>
+            </div>
+          </form>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head">
+            <h3>Kurulum Notu</h3>
+          </div>
+          <div class="panel-body setup-note">
+            <p>Önce Supabase'de yeni proje açın, sonra bu klasördeki <strong>supabase-schema.sql</strong> dosyasındaki komutları SQL Editor içinde çalıştırın. Ardından proje URL ve anon key bilgisini buraya girin.</p>
+          </div>
+        </article>
+      </section>
+    </main>
+  </div>
+
+  <template id="material-template">
+    <div class="material-item">
+      <div class="material-top">
+        <strong>Malzeme</strong>
+        <button class="icon-button remove-material" type="button" aria-label="Malzemeyi sil">×</button>
+      </div>
+      <label>
+        <span>Malzeme Adı</span>
+        <input class="material-name" type="text" placeholder="Örn. ceplik, tela, fermuar" required>
+      </label>
+      <label>
+        <span>Birim</span>
+        <select class="material-unit">
+          <option value="metre">metre (m)</option>
+          <option value="cm">santimetre (cm)</option>
+          <option value="adet">adet</option>
+        </select>
+      </label>
+      <label>
+        <span>Değer</span>
+        <input class="material-value" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Örn. 0.40" required>
+      </label>
+    </div>
+  </template>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+{
+  "name": "Tekstil Hesap",
+  "short_name": "Tekstil",
+  "description": "Müşteri bazlı tekstil malzeme ve sipariş hesaplama uygulaması",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f5f7fb",
+  "theme_color": "#020817",
+  "orientation": "portrait",
+  "lang": "tr",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
