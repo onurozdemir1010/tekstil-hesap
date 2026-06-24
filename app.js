@@ -87,10 +87,10 @@ document.querySelector("#upload-local").addEventListener("click", uploadLocalDat
 document.querySelector("#seed-samples").addEventListener("click", seedSampleCustomers);
 document.querySelector("#local-mode").addEventListener("click", clearCloudConfig);
 calculateButton.addEventListener("click", calculateOrder);
-reportButton.addEventListener("click", renderReport);
-document.querySelector("#export-report").addEventListener("click", exportReportCsv);
+if (reportButton) reportButton.addEventListener("click", renderReport);
+document.querySelector("#export-report")?.addEventListener("click", exportReportCsv);
 searchInput.addEventListener("input", renderCustomers);
-reportMonthInput.addEventListener("change", renderReport);
+if (reportMonthInput) reportMonthInput.addEventListener("change", renderReport);
 
 tabs.forEach((tab) => {
   tab.addEventListener("click", () => switchScreen(tab.dataset.screen));
@@ -512,6 +512,8 @@ async function deleteOrder(id) {
 }
 
 function renderReport() {
+  if (!reportMonthInput || !reportTitle || !reportList || !reportTotal) return;
+
   const selectedMonth = reportMonthInput.value || getCurrentMonthValue();
   reportMonthInput.value = selectedMonth;
 
