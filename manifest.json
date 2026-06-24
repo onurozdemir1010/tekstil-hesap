@@ -1,7 +1,7 @@
 {
-  "name": "Tekstil Hesap",
-  "short_name": "Tekstil",
-  "description": "Müşteri bazlı tekstil malzeme ve sipariş hesaplama uygulaması",
+  "name": "Ahenk Tekstil",
+  "short_name": "Ahenk",
+  "description": "Ahenk Tekstil müşteri bazlı malzeme ve sipariş hesaplama uygulaması",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

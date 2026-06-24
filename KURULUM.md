@@ -1,4 +1,4 @@
-# Tekstil Hesap PWA Kurulumu
+# Ahenk Tekstil PWA Kurulumu
 
 1. Supabase'de yeni proje açın.
 2. `supabase-schema.sql` dosyasındaki komutları Supabase SQL Editor içinde çalıştırın.
