@@ -148,7 +148,7 @@ button {
 
 .tabs {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   min-height: 76px;
   background: var(--nav);
 }
@@ -721,6 +721,54 @@ select {
   font-size: clamp(16px, 2.8vw, 22px);
 }
 
+.report-list {
+  display: grid;
+}
+
+.report-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 18px;
+  align-items: center;
+  padding: 24px 34px;
+  border-bottom: 1px solid var(--line);
+}
+
+.report-row strong {
+  color: var(--ink);
+  font-size: clamp(21px, 3.6vw, 34px);
+  font-weight: 950;
+}
+
+.report-row span {
+  display: block;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: clamp(17px, 3vw, 25px);
+  font-weight: 760;
+}
+
+.report-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 30px 34px;
+  color: white;
+  background: var(--ink);
+}
+
+.report-total span {
+  color: #cbd5e1;
+  font-size: clamp(18px, 3vw, 28px);
+  font-weight: 850;
+}
+
+.report-total strong {
+  font-size: clamp(26px, 5vw, 44px);
+  font-weight: 950;
+}
+
 .icon {
   display: inline-block;
   width: 28px;
@@ -839,6 +887,31 @@ select {
   transform: translateX(-50%) rotate(45deg);
 }
 
+.report-icon {
+  border-left: 4px solid currentColor;
+  border-bottom: 4px solid currentColor;
+}
+
+.report-icon::before,
+.report-icon::after {
+  content: "";
+  position: absolute;
+  bottom: 4px;
+  width: 5px;
+  border-radius: 999px 999px 0 0;
+  background: currentColor;
+}
+
+.report-icon::before {
+  left: 7px;
+  height: 14px;
+  box-shadow: 9px -7px 0 currentColor, 18px -15px 0 currentColor;
+}
+
+.report-icon::after {
+  display: none;
+}
+
 .toast {
   position: fixed;
   left: 50%;
@@ -879,6 +952,7 @@ select {
 
   .tab {
     gap: 10px;
+    font-size: clamp(14px, 2.7vw, 22px);
   }
 
   .panel {
@@ -946,7 +1020,7 @@ select {
     flex-direction: column;
     gap: 4px;
     min-height: 64px;
-    font-size: 12px;
+    font-size: 11px;
   }
 
   .tab .icon {
@@ -1005,5 +1079,11 @@ select {
   .table-head,
   .customer-list {
     min-width: 700px;
+  }
+
+  .report-row,
+  .report-total {
+    padding-left: 22px;
+    padding-right: 22px;
   }
 }

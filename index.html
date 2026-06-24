@@ -37,6 +37,10 @@
         <span class="icon users-icon" aria-hidden="true"></span>
         Liste
       </button>
+      <button class="tab" data-screen="reports" type="button">
+        <span class="icon report-icon" aria-hidden="true"></span>
+        Rapor
+      </button>
       <button class="tab" data-screen="settings" type="button">
         <span class="icon settings-icon" aria-hidden="true"></span>
         Ayarlar
@@ -177,9 +181,43 @@
         </article>
       </section>
 
-      <section class="screen" id="settings-screen">
+      <section class="screen" id="reports-screen">
         <div class="intro">
           <span>MODÜL 04</span>
+          <h2>Raporlar</h2>
+          <p>Ay seçin; siparişler tarih sırasına göre listelensin ve toplam iş adedi hesaplansın.</p>
+        </div>
+
+        <article class="panel">
+          <div class="panel-head">
+            <span class="icon report-icon accent" aria-hidden="true"></span>
+            <h3>Aylık Sipariş Raporu</h3>
+          </div>
+          <div class="panel-body">
+            <label>
+              <span>Ay Seçimi</span>
+              <input id="report-month" type="month">
+            </label>
+            <button class="primary-action" id="report-button" type="button">Raporu Göster</button>
+          </div>
+        </article>
+
+        <article class="panel report-panel">
+          <div class="panel-head result-head">
+            <div>
+              <span>Seçilen Ay</span>
+              <h3 id="report-title">Rapor Hazır</h3>
+            </div>
+            <button class="ghost-button" id="export-report" type="button">CSV Al</button>
+          </div>
+          <div class="report-list" id="report-list"></div>
+          <div class="report-total" id="report-total"></div>
+        </article>
+      </section>
+
+      <section class="screen" id="settings-screen">
+        <div class="intro">
+          <span>MODÜL 05</span>
           <h2>Bulut Ayarları</h2>
           <p>Supabase bağlantısını girin. Böylece aynı kayıtlar sizde ve iş arkadaşlarınızda ortak görünür.</p>
         </div>

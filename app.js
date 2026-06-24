@@ -40,6 +40,7 @@ const screens = {
   calculate: document.querySelector("#calculate-screen"),
   save: document.querySelector("#save-screen"),
   list: document.querySelector("#list-screen"),
+  reports: document.querySelector("#reports-screen"),
   settings: document.querySelector("#settings-screen")
 };
 
@@ -60,6 +61,11 @@ const customerList = document.querySelector("#customer-list");
 const customerCount = document.querySelector("#customer-count");
 const searchInput = document.querySelector("#search-input");
 const historyList = document.querySelector("#history-list");
+const reportMonthInput = document.querySelector("#report-month");
+const reportButton = document.querySelector("#report-button");
+const reportTitle = document.querySelector("#report-title");
+const reportList = document.querySelector("#report-list");
+const reportTotal = document.querySelector("#report-total");
 const syncStatus = document.querySelector("#sync-status");
 const settingsForm = document.querySelector("#settings-form");
 const supabaseUrlInput = document.querySelector("#supabase-url");
@@ -81,7 +87,10 @@ document.querySelector("#upload-local").addEventListener("click", uploadLocalDat
 document.querySelector("#seed-samples").addEventListener("click", seedSampleCustomers);
 document.querySelector("#local-mode").addEventListener("click", clearCloudConfig);
 calculateButton.addEventListener("click", calculateOrder);
+reportButton.addEventListener("click", renderReport);
+document.querySelector("#export-report").addEventListener("click", exportReportCsv);
 searchInput.addEventListener("input", renderCustomers);
+reportMonthInput.addEventListener("change", renderReport);
 
 tabs.forEach((tab) => {
   tab.addEventListener("click", () => switchScreen(tab.dataset.screen));
@@ -170,6 +179,7 @@ function switchScreen(screenName) {
     tab.classList.toggle("active", tab.dataset.screen === screenName);
   });
 
+  if (screenName === "reports") renderReport();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -338,6 +348,7 @@ async function calculateOrder() {
 
     renderResult(customer, quantity, calculatedMaterials);
     renderHistory();
+    renderReport();
     showToast(currentMode === "cloud" ? "Hesaplama buluta kaydedildi." : "Hesaplama tarihli kayıt olarak saklandı.");
   } catch (error) {
     showToast(`Hesaplama kaydedilemedi: ${error.message}`);
@@ -494,9 +505,91 @@ async function deleteOrder(id) {
     }
 
     renderHistory();
+    renderReport();
   } catch (error) {
     showToast(`Sipariş silinemedi: ${error.message}`);
   }
+}
+
+function renderReport() {
+  const selectedMonth = reportMonthInput.value || getCurrentMonthValue();
+  reportMonthInput.value = selectedMonth;
+
+  const filteredOrders = getOrdersForMonth(selectedMonth);
+  const monthName = formatMonthTitle(selectedMonth);
+  const totalQuantity = filteredOrders.reduce((total, order) => total + Number(order.quantity || 0), 0);
+
+  reportTitle.textContent = `${monthName} Raporu`;
+  reportList.innerHTML = "";
+  reportTotal.innerHTML = "";
+
+  if (!filteredOrders.length) {
+    reportList.innerHTML = `<div class="empty-list">${monthName} için sipariş kaydı yok.</div>`;
+    reportTotal.textContent = `Toplam: 0 iş`;
+    return;
+  }
+
+  filteredOrders.forEach((order) => {
+    const row = document.createElement("div");
+    row.className = "report-row";
+    row.innerHTML = `
+      <div>
+        <strong>${formatDate(order.createdAt)}</strong>
+        <span>${escapeHtml(order.customerName)} · ${escapeHtml(order.operator || "Belirtilmedi")}</span>
+      </div>
+      <strong>${formatNumber(order.quantity)} iş</strong>
+    `;
+    reportList.append(row);
+  });
+
+  reportTotal.innerHTML = `
+    <span>Aylık toplam sipariş</span>
+    <strong>${formatNumber(totalQuantity)} iş</strong>
+  `;
+}
+
+function getOrdersForMonth(monthValue) {
+  const [year, month] = monthValue.split("-").map(Number);
+
+  return orders
+    .filter((order) => {
+      const date = new Date(order.createdAt);
+      return date.getFullYear() === year && date.getMonth() === month - 1;
+    })
+    .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+}
+
+function exportReportCsv() {
+  const selectedMonth = reportMonthInput.value || getCurrentMonthValue();
+  const filteredOrders = getOrdersForMonth(selectedMonth);
+
+  if (!filteredOrders.length) {
+    showToast("Dışa aktarılacak rapor kaydı yok.");
+    return;
+  }
+
+  const rows = [["Tarih", "Müşteri", "İş Adedi", "İşlemi Yapan"]];
+  filteredOrders.forEach((order) => {
+    rows.push([
+      formatDateTime(order.createdAt),
+      order.customerName,
+      order.quantity,
+      order.operator || "Belirtilmedi"
+    ]);
+  });
+
+  const totalQuantity = filteredOrders.reduce((total, order) => total + Number(order.quantity || 0), 0);
+  rows.push(["", "AYLIK TOPLAM", totalQuantity, ""]);
+
+  const csv = rows.map((row) => row.map(csvCell).join(";")).join("\n");
+  const blob = new Blob([`\ufeff${csv}`], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `ahenk-tekstil-aylik-rapor-${selectedMonth}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+  showToast("Aylık rapor CSV olarak hazırlandı.");
 }
 
 function exportHistoryCsv() {
@@ -850,12 +943,26 @@ function renderAll() {
   renderSelect();
   renderCustomers();
   renderHistory();
+  renderReport();
   updateSyncStatus(currentMode === "cloud" ? "Bulut bağlı" : "Yerel kayıt");
 
   if (!customers.some((customer) => customer.id === customerSelect.value)) {
     emptyResult.classList.remove("hidden");
     resultPanel.classList.add("hidden");
   }
+}
+
+function getCurrentMonthValue() {
+  const date = new Date();
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function formatMonthTitle(monthValue) {
+  const [year, month] = monthValue.split("-").map(Number);
+  return new Intl.DateTimeFormat("tr-TR", {
+    month: "long",
+    year: "numeric"
+  }).format(new Date(year, month - 1, 1));
 }
 
 function formatDate(value) {
