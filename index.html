@@ -194,10 +194,20 @@
             <h3>Aylık Sipariş Raporu</h3>
           </div>
           <div class="panel-body">
-            <label>
+            <div class="wheel-field">
               <span>Ay Seçimi</span>
-              <input id="report-month" type="month">
-            </label>
+              <input id="report-month" type="hidden">
+              <div class="month-wheel-wrap" aria-label="Ay ve yıl seçimi">
+                <div class="wheel-column">
+                  <strong>Yıl</strong>
+                  <div class="wheel-list" id="year-wheel"></div>
+                </div>
+                <div class="wheel-column">
+                  <strong>Ay</strong>
+                  <div class="wheel-list" id="month-wheel"></div>
+                </div>
+              </div>
+            </div>
             <button class="primary-action" id="report-button" type="button">Raporu Göster</button>
           </div>
         </article>

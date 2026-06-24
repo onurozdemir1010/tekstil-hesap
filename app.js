@@ -62,6 +62,8 @@ const customerCount = document.querySelector("#customer-count");
 const searchInput = document.querySelector("#search-input");
 const historyList = document.querySelector("#history-list");
 const reportMonthInput = document.querySelector("#report-month");
+const yearWheel = document.querySelector("#year-wheel");
+const monthWheel = document.querySelector("#month-wheel");
 const reportButton = document.querySelector("#report-button");
 const reportTitle = document.querySelector("#report-title");
 const reportList = document.querySelector("#report-list");
@@ -516,6 +518,7 @@ function renderReport() {
 
   const selectedMonth = reportMonthInput.value || getCurrentMonthValue();
   reportMonthInput.value = selectedMonth;
+  updateReportWheelSelection(selectedMonth);
 
   const filteredOrders = getOrdersForMonth(selectedMonth);
   const monthName = formatMonthTitle(selectedMonth);
@@ -592,6 +595,59 @@ function exportReportCsv() {
   link.click();
   URL.revokeObjectURL(url);
   showToast("Aylık rapor CSV olarak hazırlandı.");
+}
+
+function initReportWheel() {
+  if (!reportMonthInput || !yearWheel || !monthWheel) return;
+
+  const selectedMonth = reportMonthInput.value || getCurrentMonthValue();
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 9 }, (_, index) => currentYear - 5 + index);
+  const months = getMonthNames();
+
+  yearWheel.innerHTML = years.map((year) => `
+    <button class="wheel-option" type="button" data-value="${year}">${year}</button>
+  `).join("");
+
+  monthWheel.innerHTML = months.map((month, index) => `
+    <button class="wheel-option" type="button" data-value="${String(index + 1).padStart(2, "0")}">${month}</button>
+  `).join("");
+
+  yearWheel.querySelectorAll(".wheel-option").forEach((button) => {
+    button.addEventListener("click", () => setReportWheelValue({ year: button.dataset.value }));
+  });
+
+  monthWheel.querySelectorAll(".wheel-option").forEach((button) => {
+    button.addEventListener("click", () => setReportWheelValue({ month: button.dataset.value }));
+  });
+
+  reportMonthInput.value = selectedMonth;
+  updateReportWheelSelection(selectedMonth);
+}
+
+function setReportWheelValue({ year, month }) {
+  const [currentYear, currentMonth] = (reportMonthInput.value || getCurrentMonthValue()).split("-");
+  reportMonthInput.value = `${year || currentYear}-${month || currentMonth}`;
+  renderReport();
+}
+
+function updateReportWheelSelection(monthValue) {
+  if (!yearWheel || !monthWheel || !monthValue) return;
+
+  const [selectedYear, selectedMonth] = monthValue.split("-");
+  updateWheelColumn(yearWheel, selectedYear);
+  updateWheelColumn(monthWheel, selectedMonth);
+}
+
+function updateWheelColumn(column, value) {
+  column.querySelectorAll(".wheel-option").forEach((button) => {
+    button.classList.toggle("selected", button.dataset.value === value);
+  });
+
+  const selected = column.querySelector(`.wheel-option[data-value="${value}"]`);
+  if (selected) {
+    selected.scrollIntoView({ block: "center", behavior: "smooth" });
+  }
 }
 
 function exportHistoryCsv() {
@@ -967,6 +1023,12 @@ function formatMonthTitle(monthValue) {
   }).format(new Date(year, month - 1, 1));
 }
 
+function getMonthNames() {
+  return Array.from({ length: 12 }, (_, index) =>
+    new Intl.DateTimeFormat("tr-TR", { month: "long" }).format(new Date(2026, index, 1))
+  );
+}
+
 function formatDate(value) {
   return new Intl.DateTimeFormat("tr-TR", {
     day: "2-digit",
@@ -1015,6 +1077,7 @@ function showToast(message) {
 }
 
 async function initApp() {
+  initReportWheel();
   renderSettings();
   resetForm();
   renderAll();
