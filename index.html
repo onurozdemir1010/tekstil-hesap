@@ -197,14 +197,16 @@
             <div class="wheel-field">
               <span>Ay Seçimi</span>
               <input id="report-month" type="hidden">
-              <div class="month-wheel-wrap" aria-label="Ay ve yıl seçimi">
-                <div class="wheel-column">
-                  <strong>Yıl</strong>
-                  <div class="wheel-list" id="year-wheel"></div>
-                </div>
-                <div class="wheel-column">
-                  <strong>Ay</strong>
-                  <div class="wheel-list" id="month-wheel"></div>
+              <div class="ios-date-card" aria-label="Ay ve yıl seçimi">
+                <button class="ios-current-month" id="selected-report-month" type="button">Haziran 2026</button>
+                <div class="month-wheel-wrap">
+                  <div class="wheel-selection" aria-hidden="true"></div>
+                  <div class="wheel-column">
+                    <div class="wheel-list" id="month-wheel"></div>
+                  </div>
+                  <div class="wheel-column">
+                    <div class="wheel-list" id="year-wheel"></div>
+                  </div>
                 </div>
               </div>
             </div>
