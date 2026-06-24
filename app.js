@@ -454,9 +454,12 @@ function renderHistory() {
     const item = document.createElement("div");
     item.className = "history-item";
     item.innerHTML = `
-      <div class="history-meta">
-        <strong>${escapeHtml(order.customerName)}</strong>
-        <span>${formatDateTime(order.createdAt)} · ${formatNumber(order.quantity)} iş · ${escapeHtml(order.operator || "Belirtilmedi")}</span>
+      <div class="history-top">
+        <div class="history-meta">
+          <strong>${escapeHtml(order.customerName)}</strong>
+          <span>${formatDateTime(order.createdAt)} · ${formatNumber(order.quantity)} iş · ${escapeHtml(order.operator || "Belirtilmedi")}</span>
+        </div>
+        <button class="row-button delete history-delete" type="button">Sil</button>
       </div>
       <div class="material-tags">
         ${order.materials.map((material) => `
@@ -467,8 +470,33 @@ function renderHistory() {
         `).join("")}
       </div>
     `;
+    item.querySelector(".history-delete").addEventListener("click", () => deleteOrder(order.id));
     historyList.append(item);
   });
+}
+
+async function deleteOrder(id) {
+  const order = orders.find((item) => item.id === id);
+  if (!order) return;
+
+  const confirmed = confirm(`${order.customerName} için ${formatDateTime(order.createdAt)} tarihli sipariş silinsin mi?`);
+  if (!confirmed) return;
+
+  try {
+    if (currentMode === "cloud") {
+      await apiDelete(`orders?id=eq.${encodeURIComponent(id)}`);
+      await refreshOrdersFromCloud();
+      showToast("Sipariş buluttan silindi.");
+    } else {
+      orders = orders.filter((item) => item.id !== id);
+      persistOrders();
+      showToast("Sipariş silindi.");
+    }
+
+    renderHistory();
+  } catch (error) {
+    showToast(`Sipariş silinemedi: ${error.message}`);
+  }
 }
 
 function exportHistoryCsv() {

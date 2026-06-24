@@ -692,6 +692,13 @@ select {
   border-bottom: 0;
 }
 
+.history-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
 .history-meta strong {
   display: block;
   margin-bottom: 8px;
@@ -705,6 +712,13 @@ select {
   font-size: clamp(17px, 3vw, 25px);
   font-weight: 750;
   line-height: 1.35;
+}
+
+.history-delete {
+  min-height: 48px;
+  flex: 0 0 auto;
+  padding: 0 12px;
+  font-size: clamp(16px, 2.8vw, 22px);
 }
 
 .icon {
