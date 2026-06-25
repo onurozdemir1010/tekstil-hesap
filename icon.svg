@@ -1,7 +1,23 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="96" fill="#020817"/>
-  <rect x="102" y="102" width="308" height="308" rx="42" fill="#f45105"/>
-  <path d="M178 179 334 335M334 179 178 335" stroke="#fff" stroke-width="30" stroke-linecap="round"/>
-  <circle cx="176" cy="176" r="36" fill="none" stroke="#fff" stroke-width="24"/>
-  <circle cx="176" cy="336" r="36" fill="none" stroke="#fff" stroke-width="24"/>
+  <defs>
+    <linearGradient id="bg" x1="96" y1="64" x2="416" y2="448" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#071126"/>
+      <stop offset="1" stop-color="#020817"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="128" y1="96" x2="384" y2="416" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ff7a1a"/>
+      <stop offset="1" stop-color="#f45105"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" rx="108" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="184" fill="#0d1428"/>
+  <circle cx="256" cy="256" r="168" fill="none" stroke="#1f2a44" stroke-width="10"/>
+
+  <path d="M151 372 239 139c6-16 28-16 34 0l88 233h-61l-15-45h-91l-15 45h-28Z" fill="url(#accent)"/>
+  <path d="M211 278h58l-29-86-29 86Z" fill="#020817"/>
+  <path d="M189 326c47 20 89 20 136 0" fill="none" stroke="#ffffff" stroke-width="18" stroke-linecap="round"/>
+
+  <path d="M150 414c70-30 142-30 212 0" fill="none" stroke="#ffffff" stroke-opacity="0.82" stroke-width="14" stroke-linecap="round"/>
+  <path d="M171 434c57-20 113-20 170 0" fill="none" stroke="#f45105" stroke-width="10" stroke-linecap="round"/>
 </svg>
