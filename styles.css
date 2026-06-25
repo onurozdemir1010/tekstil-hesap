@@ -77,59 +77,12 @@ button {
 }
 
 .brand-icon {
-  display: grid;
-  place-items: center;
   width: 58px;
   height: 58px;
   flex: 0 0 auto;
-  border-radius: 6px;
-  background: var(--orange);
-  position: relative;
-}
-
-.brand-icon::before,
-.brand-icon::after,
-.brand-icon span::before,
-.brand-icon span::after {
-  content: "";
-  position: absolute;
-  background: white;
-}
-
-.brand-icon::before,
-.brand-icon::after {
-  width: 31px;
-  height: 4px;
-  border-radius: 999px;
-  left: 14px;
-  top: 27px;
-}
-
-.brand-icon::before {
-  transform: rotate(45deg);
-}
-
-.brand-icon::after {
-  transform: rotate(-45deg);
-}
-
-.brand-icon span::before,
-.brand-icon span::after {
-  width: 9px;
-  height: 9px;
-  border: 4px solid white;
-  background: transparent;
-  border-radius: 50%;
-}
-
-.brand-icon span::before {
-  left: 13px;
-  top: 13px;
-}
-
-.brand-icon span::after {
-  left: 13px;
-  bottom: 13px;
+  border-radius: 14px;
+  object-fit: cover;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.22);
 }
 
 .brand h1 {
