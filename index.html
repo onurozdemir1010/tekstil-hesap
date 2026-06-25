@@ -66,8 +66,18 @@
               <select id="customer-select"></select>
             </label>
             <label>
+              <span>Atölye</span>
+              <select id="workshop-select" disabled>
+                <option value="">Önce müşteri seçin</option>
+              </select>
+            </label>
+            <label>
               <span>İş Adedi</span>
               <input id="quantity-input" type="number" min="1" step="1" inputmode="numeric" placeholder="Örn. 100">
+            </label>
+            <label>
+              <span>Sipariş Tarihi</span>
+              <input id="order-date-input" type="date">
             </label>
             <label>
               <span>İşlemi Yapan</span>
@@ -112,7 +122,7 @@
         <div class="intro">
           <span>MODÜL 02</span>
           <h2>Müşteri Kaydet</h2>
-          <p>Müşterinin her sipariş adedi için istediği birim değerleri tanımlayın.</p>
+          <p>Firma ve atölye bazlı malzeme birim değerlerini tanımlayın.</p>
         </div>
 
         <form id="customer-form" autocomplete="off">
@@ -125,6 +135,10 @@
               <label>
                 <span>Müşteri / Firma Adı</span>
                 <input id="customer-name" type="text" placeholder="Örn. X Tekstil" required>
+              </label>
+              <label>
+                <span>Atölye Adı</span>
+                <input id="workshop-name" type="text" placeholder="Örn. A Atölyesi" required>
               </label>
             </div>
           </article>
@@ -151,7 +165,7 @@
         <div class="intro list-intro">
           <span>MODÜL 03</span>
           <h2>Müşteri Listesi</h2>
-          <p>Kayıtlı tüm müşterileri, malzeme şablonlarını ve tarih bilgilerini yönetin.</p>
+          <p>Kayıtlı tüm firma, atölye ve malzeme şablonlarını yönetin.</p>
           <button class="dark-action" id="new-customer" type="button">
             <span class="icon user-plus-icon" aria-hidden="true"></span>
             Yeni Müşteri
@@ -173,7 +187,7 @@
             </label>
           </div>
           <div class="table-head" aria-hidden="true">
-            <span>Müşteri</span>
+            <span>Firma / Atölye</span>
             <span>Malzemeler</span>
             <span>İşlem</span>
           </div>

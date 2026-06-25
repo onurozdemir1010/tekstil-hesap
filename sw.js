@@ -1,4 +1,4 @@
-const CACHE_NAME = "ahenk-tekstil-v5";
+const CACHE_NAME = "ahenk-tekstil-v9";
 const APP_FILES = [
   "./",
   "./index.html",

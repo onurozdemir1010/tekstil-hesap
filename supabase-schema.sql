@@ -3,6 +3,7 @@ create extension if not exists "pgcrypto";
 create table if not exists public.customers (
   id uuid primary key default gen_random_uuid(),
   name text not null,
+  workshop_name text not null default 'Genel Atölye',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -20,6 +21,7 @@ create table if not exists public.orders (
   created_at timestamptz not null default now(),
   customer_id uuid references public.customers(id) on delete set null,
   customer_name text not null,
+  workshop_name text not null default 'Genel Atölye',
   quantity numeric not null check (quantity > 0),
   operator text not null default 'Belirtilmedi'
 );
@@ -32,6 +34,12 @@ create table if not exists public.order_materials (
   unit_value numeric not null check (unit_value >= 0),
   total numeric not null check (total >= 0)
 );
+
+alter table public.customers
+  add column if not exists workshop_name text not null default 'Genel Atölye';
+
+alter table public.orders
+  add column if not exists workshop_name text not null default 'Genel Atölye';
 
 alter table public.customers enable row level security;
 alter table public.materials enable row level security;
@@ -59,3 +67,4 @@ create policy "team can write order materials" on public.order_materials for all
 create index if not exists materials_customer_id_idx on public.materials(customer_id);
 create index if not exists orders_created_at_idx on public.orders(created_at desc);
 create index if not exists order_materials_order_id_idx on public.order_materials(order_id);
+create index if not exists customers_name_workshop_idx on public.customers(name, workshop_name);

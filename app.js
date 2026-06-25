@@ -8,6 +8,7 @@ const defaultCustomers = [
   {
     id: crypto.randomUUID(),
     name: "Veli",
+    workshopName: "Genel Atölye",
     createdAt: nowIso(),
     updatedAt: nowIso(),
     materials: [
@@ -22,6 +23,7 @@ const defaultCustomers = [
   {
     id: crypto.randomUUID(),
     name: "X Tekstil",
+    workshopName: "A Atölyesi",
     createdAt: nowIso(),
     updatedAt: nowIso(),
     materials: [
@@ -47,10 +49,13 @@ const screens = {
 const tabs = document.querySelectorAll(".tab");
 const customerForm = document.querySelector("#customer-form");
 const customerName = document.querySelector("#customer-name");
+const workshopName = document.querySelector("#workshop-name");
 const materialEditor = document.querySelector("#material-editor");
 const materialTemplate = document.querySelector("#material-template");
 const customerSelect = document.querySelector("#customer-select");
+const workshopSelect = document.querySelector("#workshop-select");
 const quantityInput = document.querySelector("#quantity-input");
+const orderDateInput = document.querySelector("#order-date-input");
 const operatorInput = document.querySelector("#operator-input");
 const calculateButton = document.querySelector("#calculate-button");
 const resultPanel = document.querySelector("#result-panel");
@@ -64,6 +69,7 @@ const historyList = document.querySelector("#history-list");
 const reportMonthInput = document.querySelector("#report-month");
 const yearWheel = document.querySelector("#year-wheel");
 const monthWheel = document.querySelector("#month-wheel");
+const selectedReportMonth = document.querySelector("#selected-report-month");
 const reportButton = document.querySelector("#report-button");
 const reportTitle = document.querySelector("#report-title");
 const reportList = document.querySelector("#report-list");
@@ -89,8 +95,13 @@ document.querySelector("#upload-local").addEventListener("click", uploadLocalDat
 document.querySelector("#seed-samples").addEventListener("click", seedSampleCustomers);
 document.querySelector("#local-mode").addEventListener("click", clearCloudConfig);
 calculateButton.addEventListener("click", calculateOrder);
+customerSelect.addEventListener("change", () => {
+  renderWorkshopSelect(customerSelect.value);
+  clearCalculationResult();
+});
 if (reportButton) reportButton.addEventListener("click", renderReport);
 document.querySelector("#export-report")?.addEventListener("click", exportReportCsv);
+selectedReportMonth?.addEventListener("click", () => renderReport());
 searchInput.addEventListener("input", renderCustomers);
 if (reportMonthInput) reportMonthInput.addEventListener("change", renderReport);
 
@@ -139,6 +150,7 @@ function loadCustomers() {
     if (Array.isArray(parsed)) {
       return parsed.map((customer) => ({
         ...customer,
+        workshopName: customer.workshopName || "Genel Atölye",
         createdAt: customer.createdAt || nowIso(),
         updatedAt: customer.updatedAt || customer.createdAt || nowIso()
       }));
@@ -156,7 +168,12 @@ function loadOrders() {
 
   try {
     const parsed = JSON.parse(saved);
-    if (Array.isArray(parsed)) return parsed;
+    if (Array.isArray(parsed)) {
+      return parsed.map((order) => ({
+        ...order,
+        workshopName: order.workshopName || "Genel Atölye"
+      }));
+    }
   } catch {
     localStorage.removeItem(ORDER_STORAGE_KEY);
   }
@@ -221,10 +238,16 @@ function readMaterialsFromForm() {
 
 async function saveCustomer() {
   const name = customerName.value.trim();
+  const workshop = workshopName.value.trim();
   const materials = readMaterialsFromForm();
 
   if (!name) {
     showToast("Müşteri adını yazın.");
+    return;
+  }
+
+  if (!workshop) {
+    showToast("Atölye adını yazın.");
     return;
   }
 
@@ -235,12 +258,12 @@ async function saveCustomer() {
 
   try {
     if (currentMode === "cloud") {
-      await saveCustomerToCloud({ id: editingId || crypto.randomUUID(), name, materials });
+      await saveCustomerToCloud({ id: editingId || crypto.randomUUID(), name, workshopName: workshop, materials });
       await refreshFromCloud({ silent: true });
       showToast(editingId ? "Müşteri bulutta güncellendi." : "Müşteri buluta kaydedildi.");
     } else if (editingId) {
       customers = customers.map((customer) =>
-        customer.id === editingId ? { ...customer, name, materials, updatedAt: nowIso() } : customer
+        customer.id === editingId ? { ...customer, name, workshopName: workshop, materials, updatedAt: nowIso() } : customer
       );
       persistCustomers();
       showToast("Müşteri güncellendi.");
@@ -248,6 +271,7 @@ async function saveCustomer() {
       customers.unshift({
         id: crypto.randomUUID(),
         name,
+        workshopName: workshop,
         createdAt: nowIso(),
         updatedAt: nowIso(),
         materials
@@ -267,6 +291,7 @@ async function saveCustomer() {
 function resetForm() {
   editingId = null;
   customerName.value = "";
+  workshopName.value = "";
   materialEditor.innerHTML = "";
   addMaterialRow();
   customerForm.querySelector(".primary-action").textContent = "Müşteriyi Kaydet";
@@ -278,6 +303,7 @@ function editCustomer(id) {
 
   editingId = id;
   customerName.value = customer.name;
+  workshopName.value = customer.workshopName || "Genel Atölye";
   materialEditor.innerHTML = "";
   customer.materials.forEach((material) => addMaterialRow(material));
   customerForm.querySelector(".primary-action").textContent = "Müşteriyi Güncelle";
@@ -288,7 +314,7 @@ async function deleteCustomer(id) {
   const customer = customers.find((item) => item.id === id);
   if (!customer) return;
 
-  const confirmed = confirm(`${customer.name} silinsin mi?`);
+  const confirmed = confirm(`${formatCustomerLabel(customer)} silinsin mi?`);
   if (!confirmed) return;
 
   try {
@@ -308,12 +334,18 @@ async function deleteCustomer(id) {
 }
 
 async function calculateOrder() {
-  const customer = customers.find((item) => item.id === customerSelect.value);
+  const customer = getSelectedWorkshopCustomer();
   const quantity = Number(quantityInput.value);
+  const orderDate = orderDateInput.value || getTodayDateValue();
   const operator = operatorInput.value.trim() || appConfig.defaultOperator || "Belirtilmedi";
 
-  if (!customer) {
+  if (!customerSelect.value) {
     showToast("Önce müşteri seçin.");
+    return;
+  }
+
+  if (!customer) {
+    showToast("Atölye seçin.");
     return;
   }
 
@@ -331,9 +363,10 @@ async function calculateOrder() {
 
   const order = {
     id: crypto.randomUUID(),
-    createdAt: nowIso(),
+    createdAt: makeOrderDateIso(orderDate),
     customerId: customer.id,
     customerName: customer.name,
+    workshopName: customer.workshopName || "Genel Atölye",
     quantity,
     operator,
     materials: calculatedMaterials
@@ -358,7 +391,7 @@ async function calculateOrder() {
 }
 
 function renderResult(customer, quantity, calculatedMaterials) {
-  resultTitle.textContent = `${customer.name} · ${formatNumber(quantity)} iş`;
+  resultTitle.textContent = `${formatCustomerLabel(customer)} · ${formatNumber(quantity)} iş`;
   resultList.innerHTML = "";
 
   calculatedMaterials.forEach((material) => {
@@ -376,12 +409,12 @@ function renderResult(customer, quantity, calculatedMaterials) {
 }
 
 function copyResult() {
-  const customer = customers.find((item) => item.id === customerSelect.value);
+  const customer = getSelectedWorkshopCustomer();
   const quantity = Number(quantityInput.value);
   if (!customer || !Number.isFinite(quantity) || quantity <= 0) return;
 
   const lines = [
-    `${customer.name} - ${formatNumber(quantity)} iş`,
+    `${formatCustomerLabel(customer)} - ${formatNumber(quantity)} iş`,
     ...customer.materials.map((material) => {
       const total = material.value * quantity;
       return `${material.name}: ${formatNumber(total)} ${material.unit}`;
@@ -395,6 +428,7 @@ function copyResult() {
 
 function renderSelect() {
   customerSelect.innerHTML = "";
+  renderWorkshopSelect("");
 
   if (!customers.length) {
     customerSelect.append(new Option("Önce müşteri kaydedin", ""));
@@ -404,16 +438,60 @@ function renderSelect() {
 
   customerSelect.disabled = false;
   customerSelect.append(new Option("Müşteri seçin", ""));
-  customers.forEach((customer) => {
-    customerSelect.append(new Option(customer.name, customer.id));
+  getUniqueCustomerNames().forEach((name) => {
+    customerSelect.append(new Option(name, name));
   });
+}
+
+function renderWorkshopSelect(customerNameValue) {
+  workshopSelect.innerHTML = "";
+
+  if (!customerNameValue) {
+    workshopSelect.append(new Option("Önce müşteri seçin", ""));
+    workshopSelect.disabled = true;
+    return;
+  }
+
+  const workshopCustomers = getWorkshopCustomers(customerNameValue);
+
+  if (!workshopCustomers.length) {
+    workshopSelect.append(new Option("Atölye bulunamadı", ""));
+    workshopSelect.disabled = true;
+    return;
+  }
+
+  workshopSelect.disabled = false;
+  workshopSelect.append(new Option("Atölye seçin", ""));
+  workshopCustomers.forEach((customer) => {
+    workshopSelect.append(new Option(customer.workshopName || "Genel Atölye", customer.id));
+  });
+}
+
+function getSelectedWorkshopCustomer() {
+  return customers.find((item) => item.id === workshopSelect.value);
+}
+
+function getUniqueCustomerNames() {
+  return [...new Set(customers.map((customer) => customer.name))]
+    .sort((a, b) => a.localeCompare(b, "tr"));
+}
+
+function getWorkshopCustomers(customerNameValue) {
+  return customers
+    .filter((customer) => customer.name === customerNameValue)
+    .sort((a, b) => (a.workshopName || "").localeCompare(b.workshopName || "", "tr"));
+}
+
+function clearCalculationResult() {
+  emptyResult.classList.remove("hidden");
+  resultPanel.classList.add("hidden");
 }
 
 function renderCustomers() {
   const query = searchInput.value.trim().toLocaleLowerCase("tr-TR");
   const filtered = customers.filter((customer) => {
     const materialText = customer.materials.map((material) => material.name).join(" ");
-    return `${customer.name} ${materialText}`.toLocaleLowerCase("tr-TR").includes(query);
+    return `${customer.name} ${customer.workshopName || ""} ${materialText}`.toLocaleLowerCase("tr-TR").includes(query);
   });
 
   customerCount.textContent = `${customers.length} müşteri`;
@@ -430,8 +508,8 @@ function renderCustomers() {
     row.innerHTML = `
       <div class="customer-name-cell">
         <strong>${escapeHtml(customer.name)}</strong>
-        <span>${customer.materials.length} kayıtlı malzeme</span>
-        <small>Güncelleme: ${formatDate(customer.updatedAt)}</small>
+        <span>${escapeHtml(customer.workshopName || "Genel Atölye")}</span>
+        <small>${customer.materials.length} kayıtlı malzeme · Güncelleme: ${formatDate(customer.updatedAt)}</small>
       </div>
       <div class="customer-materials-cell">
         <div class="material-tags">
@@ -463,14 +541,14 @@ function renderHistory() {
     return;
   }
 
-  orders.slice(0, 50).forEach((order) => {
+  getOrdersSortedByDateDesc().slice(0, 50).forEach((order) => {
     const item = document.createElement("div");
     item.className = "history-item";
     item.innerHTML = `
       <div class="history-top">
         <div class="history-meta">
           <strong>${escapeHtml(order.customerName)}</strong>
-          <span>${formatDateTime(order.createdAt)} · ${formatNumber(order.quantity)} iş · ${escapeHtml(order.operator || "Belirtilmedi")}</span>
+          <span>${escapeHtml(order.workshopName || "Genel Atölye")} · ${formatDateTime(order.createdAt)} · ${formatNumber(order.quantity)} iş · ${escapeHtml(order.operator || "Belirtilmedi")}</span>
         </div>
         <button class="row-button delete history-delete" type="button">Sil</button>
       </div>
@@ -492,7 +570,7 @@ async function deleteOrder(id) {
   const order = orders.find((item) => item.id === id);
   if (!order) return;
 
-  const confirmed = confirm(`${order.customerName} için ${formatDateTime(order.createdAt)} tarihli sipariş silinsin mi?`);
+  const confirmed = confirm(`${order.customerName} / ${order.workshopName || "Genel Atölye"} için ${formatDateTime(order.createdAt)} tarihli sipariş silinsin mi?`);
   if (!confirmed) return;
 
   try {
@@ -540,7 +618,7 @@ function renderReport() {
     row.innerHTML = `
       <div>
         <strong>${formatDate(order.createdAt)}</strong>
-        <span>${escapeHtml(order.customerName)} · ${escapeHtml(order.operator || "Belirtilmedi")}</span>
+        <span>${escapeHtml(order.customerName)} · ${escapeHtml(order.workshopName || "Genel Atölye")} · ${escapeHtml(order.operator || "Belirtilmedi")}</span>
       </div>
       <strong>${formatNumber(order.quantity)} iş</strong>
     `;
@@ -573,18 +651,19 @@ function exportReportCsv() {
     return;
   }
 
-  const rows = [["Tarih", "Müşteri", "İş Adedi", "İşlemi Yapan"]];
+  const rows = [["Tarih", "Müşteri", "Atölye", "İş Adedi", "İşlemi Yapan"]];
   filteredOrders.forEach((order) => {
     rows.push([
       formatDateTime(order.createdAt),
       order.customerName,
+      order.workshopName || "Genel Atölye",
       order.quantity,
       order.operator || "Belirtilmedi"
     ]);
   });
 
   const totalQuantity = filteredOrders.reduce((total, order) => total + Number(order.quantity || 0), 0);
-  rows.push(["", "AYLIK TOPLAM", totalQuantity, ""]);
+  rows.push(["", "AYLIK TOPLAM", "", totalQuantity, ""]);
 
   const csv = rows.map((row) => row.map(csvCell).join(";")).join("\n");
   const blob = new Blob([`\ufeff${csv}`], { type: "text/csv;charset=utf-8" });
@@ -621,6 +700,8 @@ function initReportWheel() {
     button.addEventListener("click", () => setReportWheelValue({ month: button.dataset.value }));
   });
 
+  bindWheelScroll(yearWheel, "year");
+  bindWheelScroll(monthWheel, "month");
   reportMonthInput.value = selectedMonth;
   updateReportWheelSelection(selectedMonth);
 }
@@ -637,6 +718,7 @@ function updateReportWheelSelection(monthValue) {
   const [selectedYear, selectedMonth] = monthValue.split("-");
   updateWheelColumn(yearWheel, selectedYear);
   updateWheelColumn(monthWheel, selectedMonth);
+  if (selectedReportMonth) selectedReportMonth.textContent = formatMonthTitle(monthValue);
 }
 
 function updateWheelColumn(column, value) {
@@ -650,6 +732,38 @@ function updateWheelColumn(column, value) {
   }
 }
 
+function bindWheelScroll(column, type) {
+  let scrollTimer;
+
+  column.addEventListener("scroll", () => {
+    clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(() => {
+      const centered = getCenteredWheelOption(column);
+      if (!centered) return;
+      setReportWheelValue(type === "year" ? { year: centered.dataset.value } : { month: centered.dataset.value });
+    }, 120);
+  }, { passive: true });
+}
+
+function getCenteredWheelOption(column) {
+  const columnRect = column.getBoundingClientRect();
+  const center = columnRect.top + columnRect.height / 2;
+  let closest = null;
+  let closestDistance = Infinity;
+
+  column.querySelectorAll(".wheel-option").forEach((button) => {
+    const rect = button.getBoundingClientRect();
+    const optionCenter = rect.top + rect.height / 2;
+    const distance = Math.abs(optionCenter - center);
+    if (distance < closestDistance) {
+      closest = button;
+      closestDistance = distance;
+    }
+  });
+
+  return closest;
+}
+
 function exportHistoryCsv() {
   if (!orders.length) {
     showToast("Dışa aktarılacak kayıt yok.");
@@ -657,7 +771,7 @@ function exportHistoryCsv() {
   }
 
   const rows = [
-    ["Tarih", "Müşteri", "İş Adedi", "İşlemi Yapan", "Malzeme", "Birim Değer", "Toplam", "Birim"]
+    ["Tarih", "Müşteri", "Atölye", "İş Adedi", "İşlemi Yapan", "Malzeme", "Birim Değer", "Toplam", "Birim"]
   ];
 
   orders.forEach((order) => {
@@ -665,6 +779,7 @@ function exportHistoryCsv() {
       rows.push([
         formatDateTime(order.createdAt),
         order.customerName,
+        order.workshopName || "Genel Atölye",
         order.quantity,
         order.operator || "Belirtilmedi",
         material.name,
@@ -755,6 +870,7 @@ async function refreshFromCloud(options = {}) {
 async function refreshOrdersFromCloud() {
   if (currentMode !== "cloud") return;
   orders = await fetchOrdersFromCloud();
+  orders = getOrdersSortedByDateDesc();
   persistOrders();
 }
 
@@ -834,10 +950,11 @@ function clearCloudConfig() {
 }
 
 async function fetchCustomersFromCloud() {
-  const rows = await apiGet("customers?select=id,name,created_at,updated_at,materials(id,name,unit,value)&order=updated_at.desc");
+  const rows = await apiGet("customers?select=id,name,workshop_name,created_at,updated_at,materials(id,name,unit,value)&order=updated_at.desc");
   return rows.map((row) => ({
     id: row.id,
     name: row.name,
+    workshopName: row.workshop_name || "Genel Atölye",
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     materials: (row.materials || []).map((material) => ({
@@ -850,12 +967,13 @@ async function fetchCustomersFromCloud() {
 }
 
 async function fetchOrdersFromCloud() {
-  const rows = await apiGet("orders?select=id,created_at,customer_id,customer_name,quantity,operator,order_materials(name,unit,unit_value,total)&order=created_at.desc&limit=100");
+  const rows = await apiGet("orders?select=id,created_at,customer_id,customer_name,workshop_name,quantity,operator,order_materials(name,unit,unit_value,total)&order=created_at.desc&limit=100");
   return rows.map((row) => ({
     id: row.id,
     createdAt: row.created_at,
     customerId: row.customer_id,
     customerName: row.customer_name,
+    workshopName: row.workshop_name || "Genel Atölye",
     quantity: Number(row.quantity),
     operator: row.operator,
     materials: (row.order_materials || []).map((material) => ({
@@ -864,7 +982,7 @@ async function fetchOrdersFromCloud() {
       unitValue: Number(material.unit_value),
       total: Number(material.total)
     }))
-  }));
+  })).sort((a, b) => compareOrdersByDateDesc(a, b));
 }
 
 async function saveCustomerToCloud(customer) {
@@ -873,6 +991,7 @@ async function saveCustomerToCloud(customer) {
   const payload = {
     id,
     name: customer.name,
+    workshop_name: customer.workshopName || "Genel Atölye",
     created_at: customer.createdAt || existing?.createdAt || nowIso(),
     updated_at: nowIso()
   };
@@ -898,6 +1017,7 @@ async function saveOrderToCloud(order) {
     created_at: order.createdAt,
     customer_id: order.customerId,
     customer_name: order.customerName,
+    workshop_name: order.workshopName || "Genel Atölye",
     quantity: order.quantity,
     operator: order.operator
   };
@@ -992,27 +1112,57 @@ function renderSettings() {
   if (!operatorInput.value) operatorInput.value = appConfig.defaultOperator;
 }
 
+function setDefaultOrderDate() {
+  if (orderDateInput && !orderDateInput.value) {
+    orderDateInput.value = getTodayDateValue();
+  }
+}
+
 function updateSyncStatus(label) {
   syncStatus.textContent = label;
   syncStatus.classList.toggle("cloud", currentMode === "cloud");
 }
 
 function renderAll() {
+  orders = getOrdersSortedByDateDesc();
   renderSelect();
   renderCustomers();
   renderHistory();
   renderReport();
   updateSyncStatus(currentMode === "cloud" ? "Bulut bağlı" : "Yerel kayıt");
 
-  if (!customers.some((customer) => customer.id === customerSelect.value)) {
+  if (!workshopSelect.value || !customers.some((customer) => customer.id === workshopSelect.value)) {
     emptyResult.classList.remove("hidden");
     resultPanel.classList.add("hidden");
   }
 }
 
+function getOrdersSortedByDateDesc() {
+  return [...orders].sort(compareOrdersByDateDesc);
+}
+
+function compareOrdersByDateDesc(a, b) {
+  const dateDiff = new Date(b.createdAt) - new Date(a.createdAt);
+  if (dateDiff !== 0) return dateDiff;
+  return String(b.id || "").localeCompare(String(a.id || ""));
+}
+
 function getCurrentMonthValue() {
   const date = new Date();
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function getTodayDateValue() {
+  const date = new Date();
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function makeOrderDateIso(dateValue) {
+  if (!dateValue) return nowIso();
+
+  const [year, month, day] = dateValue.split("-").map(Number);
+  const date = new Date(year, month - 1, day, 12, 0, 0);
+  return date.toISOString();
 }
 
 function formatMonthTitle(monthValue) {
@@ -1021,6 +1171,10 @@ function formatMonthTitle(monthValue) {
     month: "long",
     year: "numeric"
   }).format(new Date(year, month - 1, 1));
+}
+
+function formatCustomerLabel(customer) {
+  return `${customer.name} · ${customer.workshopName || "Genel Atölye"}`;
 }
 
 function getMonthNames() {
@@ -1079,6 +1233,7 @@ function showToast(message) {
 async function initApp() {
   initReportWheel();
   renderSettings();
+  setDefaultOrderDate();
   resetForm();
   renderAll();
 
