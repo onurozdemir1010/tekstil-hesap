@@ -320,6 +320,31 @@
     </div>
   </template>
 
+  <div class="order-detail hidden" id="order-detail" role="dialog" aria-modal="true" aria-labelledby="order-detail-title">
+    <div class="order-detail-backdrop" id="order-detail-backdrop"></div>
+    <article class="order-detail-panel">
+      <div class="order-detail-head">
+        <div>
+          <span>Sipariş Detayı</span>
+          <h3 id="order-detail-title">Sipariş</h3>
+        </div>
+        <button class="icon-button detail-close" id="order-detail-close" type="button" aria-label="Detayı kapat">×</button>
+      </div>
+      <div class="order-detail-body">
+        <div class="detail-meta" id="order-detail-meta"></div>
+        <div class="detail-summary" id="order-detail-summary"></div>
+        <div class="detail-section">
+          <strong>Malzeme Dökümü</strong>
+          <div class="detail-materials" id="order-detail-materials"></div>
+        </div>
+      </div>
+      <div class="order-detail-actions">
+        <button class="secondary-action" id="order-detail-copy" type="button">Kopyala</button>
+        <button class="primary-action" id="order-detail-done" type="button">Tamam</button>
+      </div>
+    </article>
+  </div>
+
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script src="app.js"></script>

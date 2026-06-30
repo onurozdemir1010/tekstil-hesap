@@ -37,6 +37,7 @@ let appConfig = loadConfig();
 let customers = loadCustomers();
 let orders = loadOrders();
 let editingId = null;
+let selectedOrderDetailId = null;
 let currentMode = hasCloudConfig() ? "cloud" : "local";
 
 const screens = {
@@ -69,6 +70,15 @@ const customerList = document.querySelector("#customer-list");
 const customerCount = document.querySelector("#customer-count");
 const searchInput = document.querySelector("#search-input");
 const historyList = document.querySelector("#history-list");
+const orderDetail = document.querySelector("#order-detail");
+const orderDetailBackdrop = document.querySelector("#order-detail-backdrop");
+const orderDetailClose = document.querySelector("#order-detail-close");
+const orderDetailDone = document.querySelector("#order-detail-done");
+const orderDetailCopy = document.querySelector("#order-detail-copy");
+const orderDetailTitle = document.querySelector("#order-detail-title");
+const orderDetailMeta = document.querySelector("#order-detail-meta");
+const orderDetailSummary = document.querySelector("#order-detail-summary");
+const orderDetailMaterials = document.querySelector("#order-detail-materials");
 const reportMonthInput = document.querySelector("#report-month");
 const yearWheel = document.querySelector("#year-wheel");
 const monthWheel = document.querySelector("#month-wheel");
@@ -92,6 +102,10 @@ document.querySelector("#new-customer").addEventListener("click", () => {
 });
 document.querySelector("#copy-result").addEventListener("click", copyResult);
 document.querySelector("#export-history").addEventListener("click", exportHistoryCsv);
+orderDetailBackdrop?.addEventListener("click", closeOrderDetail);
+orderDetailClose?.addEventListener("click", closeOrderDetail);
+orderDetailDone?.addEventListener("click", closeOrderDetail);
+orderDetailCopy?.addEventListener("click", copySelectedOrderDetail);
 document.querySelector("#test-connection").addEventListener("click", testConnection);
 document.querySelector("#refresh-cloud").addEventListener("click", refreshFromCloud);
 document.querySelector("#upload-local").addEventListener("click", uploadLocalData);
@@ -641,9 +655,93 @@ function renderHistory() {
         `).join("")}
       </div>
     `;
-    item.querySelector(".history-delete").addEventListener("click", () => deleteOrder(order.id));
+    item.addEventListener("click", () => openOrderDetail(order.id));
+    item.querySelector(".history-delete").addEventListener("click", (event) => {
+      event.stopPropagation();
+      deleteOrder(order.id);
+    });
     historyList.append(item);
   });
+}
+
+function openOrderDetail(id) {
+  const order = orders.find((item) => item.id === id);
+  if (!order || !orderDetail) return;
+
+  selectedOrderDetailId = id;
+  orderDetailTitle.textContent = order.customerName;
+  orderDetailMeta.innerHTML = `
+    <div>
+      <span>Atölye</span>
+      <strong>${escapeHtml(order.workshopName || "Genel Atölye")}</strong>
+    </div>
+    <div>
+      <span>Tarih / Saat</span>
+      <strong>${formatDateTime(order.createdAt)}</strong>
+    </div>
+    <div>
+      <span>İşlemi Yapan</span>
+      <strong>${escapeHtml(order.operator || "Belirtilmedi")}</strong>
+    </div>
+  `;
+
+  orderDetailSummary.innerHTML = renderOrderQuantityCards(order);
+  orderDetailMaterials.innerHTML = order.materials.map((material) => `
+    <div class="detail-material-row">
+      <div>
+        <strong>${escapeHtml(material.name)}</strong>
+        <span>${formatNumber(material.unitValue)} ${escapeHtml(material.unit)} / iş</span>
+      </div>
+      <strong>${formatNumber(material.total)} ${escapeHtml(material.unit)}</strong>
+    </div>
+  `).join("");
+
+  orderDetail.classList.remove("hidden");
+  document.body.classList.add("detail-open");
+}
+
+function closeOrderDetail() {
+  selectedOrderDetailId = null;
+  orderDetail?.classList.add("hidden");
+  document.body.classList.remove("detail-open");
+}
+
+function copySelectedOrderDetail() {
+  const order = orders.find((item) => item.id === selectedOrderDetailId);
+  if (!order) return;
+
+  navigator.clipboard.writeText(getOrderDetailLines(order).join("\n"))
+    .then(() => showToast("Sipariş detayı kopyalandı."))
+    .catch(() => showToast("Kopyalama yapılamadı."));
+}
+
+function renderOrderQuantityCards(order) {
+  const colors = getOrderColorQuantities(order);
+  const cards = [
+    ["Toplam", `${formatNumber(order.quantity)} iş`]
+  ];
+
+  if (colors.white > 0) cards.push(["Beyaz", `${formatNumber(colors.white)} iş`]);
+  if (colors.black > 0) cards.push(["Siyah", `${formatNumber(colors.black)} iş`]);
+
+  return cards.map(([label, value]) => `
+    <div>
+      <span>${label}</span>
+      <strong>${value}</strong>
+    </div>
+  `).join("");
+}
+
+function getOrderDetailLines(order) {
+  return [
+    `${order.customerName} / ${order.workshopName || "Genel Atölye"}`,
+    `Tarih: ${formatDateTime(order.createdAt)}`,
+    `İş: ${formatOrderQuantitySummary(order)}`,
+    `İşlemi yapan: ${order.operator || "Belirtilmedi"}`,
+    "",
+    "Malzeme Dökümü:",
+    ...order.materials.map((material) => `${material.name}: ${formatNumber(material.total)} ${material.unit}`)
+  ];
 }
 
 async function deleteOrder(id) {
