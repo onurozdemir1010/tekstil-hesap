@@ -1161,8 +1161,17 @@ function makeOrderDateIso(dateValue) {
   if (!dateValue) return nowIso();
 
   const [year, month, day] = dateValue.split("-").map(Number);
-  const date = new Date(year, month - 1, day, 12, 0, 0);
-  return date.toISOString();
+  const now = new Date();
+
+  return new Date(
+    year,
+    month - 1,
+    day,
+    now.getHours(),
+    now.getMinutes(),
+    now.getSeconds(),
+    now.getMilliseconds()
+  ).toISOString();
 }
 
 function formatMonthTitle(monthValue) {
