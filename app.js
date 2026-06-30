@@ -719,7 +719,7 @@ function getOrdersForMonth(monthValue) {
       const date = new Date(order.createdAt);
       return date.getFullYear() === year && date.getMonth() === month - 1;
     })
-    .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    .sort(compareOrdersByDateDesc);
 }
 
 function exportReportCsv() {
