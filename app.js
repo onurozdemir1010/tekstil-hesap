@@ -1,6 +1,7 @@
 const STORAGE_KEY = "tekstil-hesap-customers";
 const ORDER_STORAGE_KEY = "tekstil-hesap-orders";
 const CONFIG_STORAGE_KEY = "tekstil-hesap-config";
+const COLOR_SPLIT_MATERIAL_KEYWORDS = ["ceplik", "kemer astarı", "diz astarı", "biye"];
 
 const nowIso = () => new Date().toISOString();
 
@@ -54,6 +55,8 @@ const materialEditor = document.querySelector("#material-editor");
 const materialTemplate = document.querySelector("#material-template");
 const customerSelect = document.querySelector("#customer-select");
 const workshopSelect = document.querySelector("#workshop-select");
+const whiteQuantityInput = document.querySelector("#white-quantity-input");
+const blackQuantityInput = document.querySelector("#black-quantity-input");
 const quantityInput = document.querySelector("#quantity-input");
 const orderDateInput = document.querySelector("#order-date-input");
 const operatorInput = document.querySelector("#operator-input");
@@ -104,6 +107,8 @@ document.querySelector("#export-report")?.addEventListener("click", exportReport
 selectedReportMonth?.addEventListener("click", () => renderReport());
 searchInput.addEventListener("input", renderCustomers);
 if (reportMonthInput) reportMonthInput.addEventListener("change", renderReport);
+whiteQuantityInput?.addEventListener("input", updateTotalQuantityFromColors);
+blackQuantityInput?.addEventListener("input", updateTotalQuantityFromColors);
 
 tabs.forEach((tab) => {
   tab.addEventListener("click", () => switchScreen(tab.dataset.screen));
@@ -335,7 +340,8 @@ async function deleteCustomer(id) {
 
 async function calculateOrder() {
   const customer = getSelectedWorkshopCustomer();
-  const quantity = Number(quantityInput.value);
+  const quantities = getOrderQuantities();
+  const quantity = quantities.total;
   const orderDate = orderDateInput.value || getTodayDateValue();
   const operator = operatorInput.value.trim() || appConfig.defaultOperator || "Belirtilmedi";
 
@@ -350,16 +356,11 @@ async function calculateOrder() {
   }
 
   if (!Number.isFinite(quantity) || quantity <= 0) {
-    showToast("İş adedini doğru girin.");
+    showToast("Beyaz veya siyah iş adedini girin.");
     return;
   }
 
-  const calculatedMaterials = customer.materials.map((material) => ({
-    name: material.name,
-    unit: material.unit,
-    unitValue: material.value,
-    total: material.value * quantity
-  }));
+  const calculatedMaterials = calculateMaterials(customer.materials, quantities);
 
   const order = {
     id: crypto.randomUUID(),
@@ -368,6 +369,10 @@ async function calculateOrder() {
     customerName: customer.name,
     workshopName: customer.workshopName || "Genel Atölye",
     quantity,
+    colorQuantities: {
+      white: quantities.white,
+      black: quantities.black
+    },
     operator,
     materials: calculatedMaterials
   };
@@ -381,7 +386,7 @@ async function calculateOrder() {
       persistOrders();
     }
 
-    renderResult(customer, quantity, calculatedMaterials);
+    renderResult(customer, quantities, calculatedMaterials);
     renderHistory();
     renderReport();
     showToast(currentMode === "cloud" ? "Hesaplama buluta kaydedildi." : "Hesaplama tarihli kayıt olarak saklandı.");
@@ -390,8 +395,8 @@ async function calculateOrder() {
   }
 }
 
-function renderResult(customer, quantity, calculatedMaterials) {
-  resultTitle.textContent = `${formatCustomerLabel(customer)} · ${formatNumber(quantity)} iş`;
+function renderResult(customer, quantities, calculatedMaterials) {
+  resultTitle.textContent = `${formatCustomerLabel(customer)} · ${formatOrderQuantitySummary({ quantity: quantities.total, colorQuantities: quantities })}`;
   resultList.innerHTML = "";
 
   calculatedMaterials.forEach((material) => {
@@ -408,17 +413,92 @@ function renderResult(customer, quantity, calculatedMaterials) {
   resultPanel.classList.remove("hidden");
 }
 
+function updateTotalQuantityFromColors() {
+  const quantities = getOrderQuantities();
+  quantityInput.value = quantities.total > 0 ? quantities.total : "";
+  clearCalculationResult();
+}
+
+function getOrderQuantities() {
+  const white = getQuantityInputValue(whiteQuantityInput);
+  const black = getQuantityInputValue(blackQuantityInput);
+
+  return {
+    white,
+    black,
+    total: white + black
+  };
+}
+
+function getQuantityInputValue(input) {
+  const value = Number(input?.value || 0);
+  return Number.isFinite(value) && value > 0 ? value : 0;
+}
+
+function calculateMaterials(materials, quantities) {
+  return materials.flatMap((material) => {
+    if (!isColorSplitMaterial(material.name)) {
+      return [{
+        name: material.name,
+        unit: material.unit,
+        unitValue: material.value,
+        total: material.value * quantities.total
+      }];
+    }
+
+    const baseName = getColorSplitBaseName(material.name);
+    const rows = [];
+
+    if (quantities.white > 0) {
+      rows.push({
+        name: `${baseName} - Beyaz`,
+        unit: material.unit,
+        unitValue: material.value,
+        total: material.value * quantities.white
+      });
+    }
+
+    if (quantities.black > 0) {
+      rows.push({
+        name: `${baseName} - Siyah`,
+        unit: material.unit,
+        unitValue: material.value,
+        total: material.value * quantities.black
+      });
+    }
+
+    return rows;
+  });
+}
+
+function isColorSplitMaterial(name) {
+  const normalized = normalizeMaterialName(name);
+  return COLOR_SPLIT_MATERIAL_KEYWORDS.some((keyword) => normalized.includes(keyword));
+}
+
+function getColorSplitBaseName(name) {
+  return String(name)
+    .replace(/\s*[-–—]?\s*(beyaz|siyah)\s*$/i, "")
+    .replace(/\s*(^|\s)(beyaz|siyah)(?=\s|$)\s*/ig, " ")
+    .trim();
+}
+
+function normalizeMaterialName(name) {
+  return String(name || "")
+    .trim()
+    .toLocaleLowerCase("tr-TR");
+}
+
 function copyResult() {
   const customer = getSelectedWorkshopCustomer();
-  const quantity = Number(quantityInput.value);
-  if (!customer || !Number.isFinite(quantity) || quantity <= 0) return;
+  const quantities = getOrderQuantities();
+  if (!customer || quantities.total <= 0) return;
+
+  const calculatedMaterials = calculateMaterials(customer.materials, quantities);
 
   const lines = [
-    `${formatCustomerLabel(customer)} - ${formatNumber(quantity)} iş`,
-    ...customer.materials.map((material) => {
-      const total = material.value * quantity;
-      return `${material.name}: ${formatNumber(total)} ${material.unit}`;
-    })
+    `${formatCustomerLabel(customer)} - ${formatOrderQuantitySummary({ quantity: quantities.total, colorQuantities: quantities })}`,
+    ...calculatedMaterials.map((material) => `${material.name}: ${formatNumber(material.total)} ${material.unit}`)
   ];
 
   navigator.clipboard.writeText(lines.join("\n"))
@@ -548,7 +628,7 @@ function renderHistory() {
       <div class="history-top">
         <div class="history-meta">
           <strong>${escapeHtml(order.customerName)}</strong>
-          <span>${escapeHtml(order.workshopName || "Genel Atölye")} · ${formatDateTime(order.createdAt)} · ${formatNumber(order.quantity)} iş · ${escapeHtml(order.operator || "Belirtilmedi")}</span>
+          <span>${escapeHtml(order.workshopName || "Genel Atölye")} · ${formatDateTime(order.createdAt)} · ${escapeHtml(formatOrderQuantitySummary(order))} · ${escapeHtml(order.operator || "Belirtilmedi")}</span>
         </div>
         <button class="row-button delete history-delete" type="button">Sil</button>
       </div>
@@ -620,7 +700,7 @@ function renderReport() {
         <strong>${formatDate(order.createdAt)}</strong>
         <span>${escapeHtml(order.customerName)} · ${escapeHtml(order.workshopName || "Genel Atölye")} · ${escapeHtml(order.operator || "Belirtilmedi")}</span>
       </div>
-      <strong>${formatNumber(order.quantity)} iş</strong>
+      <strong>${escapeHtml(formatOrderQuantitySummary(order))}</strong>
     `;
     reportList.append(row);
   });
@@ -651,19 +731,22 @@ function exportReportCsv() {
     return;
   }
 
-  const rows = [["Tarih", "Müşteri", "Atölye", "İş Adedi", "İşlemi Yapan"]];
+  const rows = [["Tarih", "Müşteri", "Atölye", "Toplam İş", "Beyaz İş", "Siyah İş", "İşlemi Yapan"]];
   filteredOrders.forEach((order) => {
+    const colors = getOrderColorQuantities(order);
     rows.push([
       formatDateTime(order.createdAt),
       order.customerName,
       order.workshopName || "Genel Atölye",
       order.quantity,
+      colors.white || "",
+      colors.black || "",
       order.operator || "Belirtilmedi"
     ]);
   });
 
   const totalQuantity = filteredOrders.reduce((total, order) => total + Number(order.quantity || 0), 0);
-  rows.push(["", "AYLIK TOPLAM", "", totalQuantity, ""]);
+  rows.push(["", "AYLIK TOPLAM", "", totalQuantity, "", "", ""]);
 
   const csv = rows.map((row) => row.map(csvCell).join(";")).join("\n");
   const blob = new Blob([`\ufeff${csv}`], { type: "text/csv;charset=utf-8" });
@@ -771,16 +854,19 @@ function exportHistoryCsv() {
   }
 
   const rows = [
-    ["Tarih", "Müşteri", "Atölye", "İş Adedi", "İşlemi Yapan", "Malzeme", "Birim Değer", "Toplam", "Birim"]
+    ["Tarih", "Müşteri", "Atölye", "Toplam İş", "Beyaz İş", "Siyah İş", "İşlemi Yapan", "Malzeme", "Birim Değer", "Toplam", "Birim"]
   ];
 
   orders.forEach((order) => {
+    const colors = getOrderColorQuantities(order);
     order.materials.forEach((material) => {
       rows.push([
         formatDateTime(order.createdAt),
         order.customerName,
         order.workshopName || "Genel Atölye",
         order.quantity,
+        colors.white || "",
+        colors.black || "",
         order.operator || "Belirtilmedi",
         material.name,
         material.unitValue,
@@ -1214,6 +1300,52 @@ function formatNumber(value) {
   return new Intl.NumberFormat("tr-TR", {
     maximumFractionDigits: 2
   }).format(value);
+}
+
+function formatOrderQuantitySummary(order) {
+  const total = Number(order.quantity || order.total || 0);
+  const colors = getOrderColorQuantities(order);
+  const parts = [];
+
+  if (colors.white > 0) parts.push(`Beyaz ${formatNumber(colors.white)}`);
+  if (colors.black > 0) parts.push(`Siyah ${formatNumber(colors.black)}`);
+
+  return parts.length
+    ? `${formatNumber(total)} iş (${parts.join(" · ")})`
+    : `${formatNumber(total)} iş`;
+}
+
+function getOrderColorQuantities(order) {
+  const explicit = order.colorQuantities || {};
+  const white = Number(explicit.white || 0);
+  const black = Number(explicit.black || 0);
+
+  if (white > 0 || black > 0) {
+    return { white, black };
+  }
+
+  return inferColorQuantitiesFromMaterials(order.materials || []);
+}
+
+function inferColorQuantitiesFromMaterials(materials) {
+  return materials.reduce((totals, material) => {
+    const unitValue = Number(material.unitValue || 0);
+    const total = Number(material.total || 0);
+    if (!unitValue || !total) return totals;
+
+    const quantity = total / unitValue;
+    const normalized = normalizeMaterialName(material.name);
+
+    if (normalized.endsWith("beyaz")) {
+      totals.white = Math.max(totals.white, quantity);
+    }
+
+    if (normalized.endsWith("siyah")) {
+      totals.black = Math.max(totals.black, quantity);
+    }
+
+    return totals;
+  }, { white: 0, black: 0 });
 }
 
 function csvCell(value) {

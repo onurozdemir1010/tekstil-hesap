@@ -235,6 +235,11 @@ input::placeholder {
   color: #758198;
 }
 
+input[readonly] {
+  background: #f8fafc;
+  color: #475569;
+}
+
 select {
   appearance: none;
   background-image:
